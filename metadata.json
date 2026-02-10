@@ -1,0 +1,8 @@
+{
+  "name": "怡乐家园 (Yile Home)",
+  "description": "A comprehensive community application designed for the elderly, featuring daily missions, sensory garden exploration, a mutual aid reward system, and AI-powered plant identification.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
