@@ -143,11 +143,14 @@ const PlantIDScreen: React.FC<PlantIDScreenProps> = ({ onBack, onNavigate, onEar
       result.sourceType = 'plant';
       setIdentification(result);
       if (pinId) triggerStampAward();
-    } catch (err) {
-      // silently fail or retry
+      setIdentification(result);
+      if (pinId) triggerStampAward();
+    } catch (err: any) {
+      console.error("Identification failed:", err);
+      setError(err.message || "无法识别植物，请检查网络或重试");
       setIsProcessing(false);
     } finally {
-      // setIsProcessing(false); // handled in try
+      setIsProcessing(false);
     }
   }, [pinId, sensoryType]);
 
@@ -178,8 +181,9 @@ const PlantIDScreen: React.FC<PlantIDScreenProps> = ({ onBack, onNavigate, onEar
         result.sourceType = sensoryType === 'Hearing' ? 'sound' : 'plant';
         setIdentification(result);
         if (pinId) triggerStampAward();
-      } catch (err) {
-        setError("Could not identify. Try again.");
+      } catch (err: any) {
+        console.error("Voice ID failed:", err);
+        setError(err.message || "无法识别描述，请重试");
       } finally {
         setIsProcessing(false);
       }
@@ -448,6 +452,16 @@ const PlantIDScreen: React.FC<PlantIDScreenProps> = ({ onBack, onNavigate, onEar
         <div className="absolute inset-0 z-[60] bg-black/40 backdrop-blur-md flex flex-col items-center justify-center gap-6">
           <div className="size-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
           <p className="text-white font-bold text-lg animate-pulse">正在利用 AI 感知花园...</p>
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {error && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[70] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="bg-red-500/90 text-white px-6 py-3 rounded-full shadow-lg backdrop-blur-md font-bold text-sm flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg">error</span>
+            {error}
+          </div>
         </div>
       )}
     </div>

@@ -3,7 +3,8 @@ import React, { useMemo, useState } from 'react';
 import { Screen, UserRole, Activity } from '../types';
 import { IMAGES } from '../constants';
 import BottomNav from '../components/BottomNav';
-import { getBeijingDate, getCurrentWeekDays } from '../utils/dateUtils';
+import { fetchWeather, WeatherData } from '../services/weatherService';
+import { getBeijingDate, getCurrentWeekDays, getSolarTerm } from '../utils/dateUtils';
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
@@ -41,6 +42,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const isAuthorized = userRole === UserRole.Staff || userRole === UserRole.Volunteer;
   const t = (zh: string, en: string) => language === 'zh' ? zh : en;
+
+  // Weather & Solar Term State
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [solarTerm, setSolarTerm] = useState<string>('');
+  const [loadingWeather, setLoadingWeather] = useState(true);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      setLoadingWeather(true);
+
+      // Load Solar Term
+      const term = getSolarTerm();
+      setSolarTerm(term);
+
+      // Load Weather
+      const data = await fetchWeather();
+      if (data) {
+        setWeather(data);
+      }
+
+      setLoadingWeather(false);
+    };
+
+    loadData();
+  }, []);
+
+  const getWeatherIcon = (code: string) => {
+    const c = parseInt(code);
+    if (c >= 100 && c < 200) return 'wb_sunny';
+    if (c >= 300 && c < 400) return 'rainy';
+    if (c >= 400 && c < 500) return 'ac_unit';
+    if (c >= 500 && c < 600) return 'foggy';
+    return 'wb_cloudy';
+  };
 
   // Use Dynamic Date
   const { day: todayDay } = React.useMemo(() => getBeijingDate(), []);
@@ -138,18 +173,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
       <main className="flex-1 flex flex-col gap-6 p-6 pt-4 overflow-y-auto no-scrollbar">
         <section aria-label="Weather">
-          <div className="flex items-stretch justify-between gap-4 rounded-3xl bg-surface-beige p-6 shadow-soft">
-            <div className="flex flex-col justify-center gap-2 flex-[2]">
-              <div className="flex items-center gap-3 mb-1">
-                <span className="material-symbols-outlined text-amber-500 text-[36px] filled">wb_sunny</span>
-                <span className="text-4xl font-bold text-accent-black">24°C</span>
+          <div className="flex items-stretch justify-between gap-4 rounded-3xl bg-surface-beige p-6 shadow-soft min-h-[140px]">
+            {loadingWeather ? (
+              <div className="flex flex-col justify-center gap-4 flex-[2] animate-pulse">
+                <div className="h-8 w-24 bg-gray-200 rounded-md"></div>
+                <div className="h-6 w-32 bg-gray-200 rounded-md"></div>
+                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
               </div>
-              <p className="text-lg font-bold text-text-main/80">{t('晴空万里', 'Sunny Skies')}</p>
-              <div className="mt-1 inline-flex items-center gap-1.5 bg-primary-light/40 px-3 py-1 rounded-full w-fit">
-                <span className="material-symbols-outlined text-[18px] text-primary-dark filled">water_drop</span>
-                <span className="text-primary-dark text-sm font-bold">{t('节气：谷雨', 'Term: Grain Rain')}</span>
+            ) : (
+              <div className="flex flex-col justify-center gap-2 flex-[2]">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="material-symbols-outlined text-amber-500 text-[36px] filled">
+                    {weather ? getWeatherIcon(weather.icon) : 'wb_cloudy'}
+                  </span>
+                  <span className="text-4xl font-bold text-accent-black">{weather ? weather.temp : '--'}°C</span>
+                </div>
+                <p className="text-lg font-bold text-text-main/80">{weather ? weather.text : t('暂无天气数据', 'Weather Unavailable')}</p>
+                <div className="mt-1 inline-flex items-center gap-1.5 bg-primary-light/40 px-3 py-1 rounded-full w-fit">
+                  <span className="material-symbols-outlined text-[18px] text-primary-dark filled">water_drop</span>
+                  <span className="text-primary-dark text-sm font-bold">
+                    {t(`节气：${solarTerm || '未知'}`, `Term: ${solarTerm || 'Unknown'}`)}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
+
             <div
               className="w-1/3 aspect-square bg-center bg-no-repeat bg-cover rounded-2xl flex-1 shadow-inner overflow-hidden border-2 border-white/50"
               style={{ backgroundImage: `url("${IMAGES.GARDEN_THUMB}")` }}

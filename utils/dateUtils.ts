@@ -1,4 +1,18 @@
+import { Lunar } from 'lunar-javascript';
+
 export const BEIJING_TIMEZONE = 'Asia/Shanghai';
+
+/**
+ * Gets the current solar term (Jieqi)
+ */
+export const getSolarTerm = () => {
+    const lunar = Lunar.fromDate(new Date());
+    const jieqi = lunar.getJieQi();
+    if (jieqi) return jieqi;
+
+    const prevJieQi = lunar.getPrevJieQi();
+    return prevJieQi ? prevJieQi.getName() : '';
+};
 
 /**
  * Gets the current date info in Beijing time
