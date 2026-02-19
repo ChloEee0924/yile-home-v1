@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Screen, UserRole, Activity } from '../types';
 import { IMAGES } from '../constants';
 import BottomNav from '../components/BottomNav';
+import { getBeijingDate, getCurrentWeekDays } from '../utils/dateUtils';
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
@@ -41,20 +42,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   const isAuthorized = userRole === UserRole.Staff || userRole === UserRole.Volunteer;
   const t = (zh: string, en: string) => language === 'zh' ? zh : en;
 
-  // Today's date is fixed at 24 for this demo
-  const TODAY_DATE = 24;
-  const [selectedDate, setSelectedDate] = useState(TODAY_DATE);
+  // Use Dynamic Date
+  const { day: todayDay } = React.useMemo(() => getBeijingDate(), []);
+  const [selectedDate, setSelectedDate] = useState(todayDay);
+
+  // Initial selection to today
+  React.useEffect(() => {
+    setSelectedDate(todayDay);
+  }, [todayDay]);
 
   // Mock Dynamic Missions with i18n
-  const dynamicMissions: Record<number, Mission[]> = {
-    21: [{ id: 'm21-1', title: t('草本晨间茶', 'Morning Herb Tea'), desc: t('在服务中心尝试今日推荐的新鲜薄荷茶。', 'Try today\'s fresh mint tea at the center.'), category: t('10 分钟味觉探索', '10m Taste Exploration'), reward: 5, icon: 'restaurant' }],
-    22: [{ id: 'm22-1', title: t('花园写生之旅', 'Garden Sketching'), desc: t('带上纸笔，捕捉园中花朵最动人的瞬间。', 'Capture the flowers with paper and pen.'), category: t('20 分钟视觉探索', '20m Visual Exploration'), reward: 5, icon: 'palette' }],
-    23: [{ id: 'm23-1', title: t('聆听自然共鸣', 'Natural Resonance'), desc: t('寻找翠竹风铃，记录一段大自然的旋律。', 'Find bamboo chimes and record nature.'), category: t('10 分钟听觉探索', '10m Audio Exploration'), reward: 5, icon: 'hearing' }],
-    24: [{ id: 'm24-1', title: t('五感花园漫步', 'Sensory Walk'), desc: t('去社区花园深呼吸，听听鸟叫，找寻大自然的声音。', 'Take a deep breath and listen to birds.'), category: t('10 分钟感官探索', '10m Sensory Exploration'), reward: 5, icon: 'timer' }],
-    25: [{ id: 'm25-1', title: t('多肉景墙探秘', 'Succulent Wall'), desc: t('感受不同多肉植物的厚实叶片与独特纹理。', 'Feel the textures of succulents.'), category: t('15 分钟触觉探索', '15m Touch Exploration'), reward: 5, icon: 'back_hand' }],
-    26: [{ id: 'm26-1', title: t('晨间气功体验', 'Morning Qigong'), desc: t('加入长寿亭的太极小组，感受身体的律动。', 'Join Tai Chi at the Longevity Pavilion.'), category: t('30 分钟社区社交', '30m Community Social'), reward: 5, icon: 'fitness_center' }],
-    27: [{ id: 'm27-1', title: t('寻找芳香奇迹', 'Scent Miracle'), desc: t('在薰衣草小径中，辨识出今日最浓郁的香气。', 'Identify the strongest scent on the path.'), category: t('10 分钟嗅觉探索', '10m Scent Exploration'), reward: 5, icon: 'air' }],
-  };
+  // Map mission IDs to weekday index (0-6)
+  // 0: Mon, 1: Tue, ... 6: Sun
+  const dynamicMissionsTemplate: Mission[] = [
+    { id: 'm-mon', title: t('草本晨间茶', 'Morning Herb Tea'), desc: t('在服务中心尝试今日推荐的新鲜薄荷茶。', 'Try today\'s fresh mint tea at the center.'), category: t('10 分钟味觉探索', '10m Taste Exploration'), reward: 5, icon: 'restaurant' },
+    { id: 'm-tue', title: t('花园写生之旅', 'Garden Sketching'), desc: t('带上纸笔，捕捉园中花朵最动人的瞬间。', 'Capture the flowers with paper and pen.'), category: t('20 分钟视觉探索', '20m Visual Exploration'), reward: 5, icon: 'palette' },
+    { id: 'm-wed', title: t('聆听自然共鸣', 'Natural Resonance'), desc: t('寻找翠竹风铃，记录一段大自然的旋律。', 'Find bamboo chimes and record nature.'), category: t('10 分钟听觉探索', '10m Audio Exploration'), reward: 5, icon: 'hearing' },
+    { id: 'm-thu', title: t('五感花园漫步', 'Sensory Walk'), desc: t('去社区花园深呼吸，听听鸟叫，找寻大自然的声音。', 'Take a deep breath and listen to birds.'), category: t('10 分钟感官探索', '10m Sensory Exploration'), reward: 5, icon: 'timer' },
+    { id: 'm-fri', title: t('多肉景墙探秘', 'Succulent Wall'), desc: t('感受不同多肉植物的厚实叶片与独特纹理。', 'Feel the textures of succulents.'), category: t('15 分钟触觉探索', '15m Touch Exploration'), reward: 5, icon: 'back_hand' },
+    { id: 'm-sat', title: t('晨间气功体验', 'Morning Qigong'), desc: t('加入长寿亭的太极小组，感受身体的律动。', 'Join Tai Chi at the Longevity Pavilion.'), category: t('30 分钟社区社交', '30m Community Social'), reward: 5, icon: 'fitness_center' },
+    { id: 'm-sun', title: t('寻找芳香奇迹', 'Scent Miracle'), desc: t('在薰衣草小径中，辨识出今日最浓郁的香气。', 'Identify the strongest scent on the path.'), category: t('10 分钟嗅觉探索', '10m Scent Exploration'), reward: 5, icon: 'air' },
+  ];
 
   const FIXED_PLANTING_MISSION: Mission = {
     id: 'fixed-planting',
@@ -67,28 +75,43 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
     fixed: true
   };
 
-  const calendarDays = useMemo(() => [
-    { day: t('一', 'M'), date: 21 },
-    { day: t('二', 'T'), date: 22, isPlantingDay: true },
-    { day: t('三', 'W'), date: 23 },
-    { day: t('四', 'T'), date: 24, isToday: true, isPlantingDay: true },
-    { day: t('五', 'F'), date: 25 },
-    { day: t('六', 'S'), date: 26, isPlantingDay: true },
-    { day: t('日', 'S'), date: 27 },
-  ], [language]);
+  // const { day: todayDay, month: todayMonth } = React.useMemo(() => getBeijingDate(), []);
+
+  const calendarDays = useMemo(() => getCurrentWeekDays(language), [language]);
 
   const missionsForDay = useMemo(() => {
-    const list = [...(dynamicMissions[selectedDate] || [])];
-    const isPlantingDay = calendarDays.find(d => d.date === selectedDate)?.isPlantingDay;
+    // Determine which mission from the template to show based on the selected date
+    // We can map the selectedDate (day of month) to a weekday index (0-6)
+    // First find the full date object corresponding to the selectedDate in the current week
+    const selectedDayData = calendarDays.find(d => d.date === selectedDate);
+
+    // Default to Monday (0) if not found (shouldn't happen if selectedDate is in calendarDays)
+    let weekdayIndex = 0;
+    if (selectedDayData && selectedDayData.fullDate) {
+      // getBeijingDate uses 0=Sunday, 1=Monday... 6=Saturday in standard JS new Date().getDay()
+      // But our template uses 0=Mon, ... 6=Sun OR we can just use the index directly
+      // Let's rely on standard JS getDay(): 0=Sun, 1=Mon...6=Sat.
+      // Our template array `dynamicMissionsTemplate` has size 7. 
+      // Let's assume index 0 = Mon, 1 = Tue... 5 = Sat, 6 = Sun.
+
+      const jsDay = selectedDayData.fullDate.getDay(); // 0(Sun) - 6(Sat)
+      // Convert to 0(Mon) - 6(Sun)
+      weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
+    }
+
+    const dailyMission = dynamicMissionsTemplate[weekdayIndex];
+    const list = dailyMission ? [dailyMission] : [];
+
+    const isPlantingDay = selectedDayData?.isPlantingDay;
     if (isPlantingDay) {
       list.push(FIXED_PLANTING_MISSION);
     }
     return list;
-  }, [selectedDate, language]);
+  }, [selectedDate, language, calendarDays]);
 
-  const isPast = selectedDate < TODAY_DATE;
-  const isFuture = selectedDate > TODAY_DATE;
-  const isToday = selectedDate === TODAY_DATE;
+  const isPast = selectedDate < todayDay; // Simple comparison for same month
+  const isFuture = selectedDate > todayDay;
+  const isToday = selectedDate === todayDay;
 
   return (
     <div className="flex flex-col min-h-screen pb-32">
@@ -204,8 +227,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
                     <div className="mt-2 flex items-center justify-between">
                       <div className={`flex items-center gap-2 rounded-full px-4 py-1.5 backdrop-blur-md border ${isFuture ? 'bg-gray-100 border-gray-200 text-gray-400' :
-                          isDone || isPast ? 'bg-primary/10 border-primary/20 text-primary-dark' :
-                            'bg-white/60 border-white/50 text-accent-black'
+                        isDone || isPast ? 'bg-primary/10 border-primary/20 text-primary-dark' :
+                          'bg-white/60 border-white/50 text-accent-black'
                         }`}>
                         <span className={`material-symbols-outlined filled text-[18px] ${isFuture ? 'text-gray-300' : isDone || isPast ? 'text-primary' : 'text-amber-500'
                           }`}>stars</span>
